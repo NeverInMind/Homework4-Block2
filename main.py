@@ -4,6 +4,7 @@ import pathlib
 import mimetypes
 import socket
 import threading
+import time
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 5000
@@ -53,32 +54,32 @@ class HttpHandler(BaseHTTPRequestHandler):
             self.wfile.write(fd.read())
 
 def run_server(ip, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server = ip, port
-    sock.bind(server)
-    try:
+    with socket.socket() as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((ip, port))
+        s.listen(1)
+        conn, addr = s.accept()
+        print(f"Connected by {addr}")
+        with conn:
+            while True:
+                data = conn.recv(1024)
+                print(f'From client: {data}')
+                if not data:
+                    break
+                conn.send(data.upper())
+
+
+def run_client(host, port):
+    with socket.socket() as s:
         while True:
-            data, address = sock.recvfrom(1024)
-            print(f'Received data: {data.decode()} from: {address}')
-            sock.sendto(data, address)
-            print(f'Send data: {data.decode()} to: {address}')
-
-    except KeyboardInterrupt:
-        print(f'Destroy server')
-    finally: 
-        sock.close()
-
-def run_client(ip, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server = ip, port
-    message = HttpHandler.do_POST()
-    print(message)
-    sock.sendto(message, server)
-    print(f'Send data: {message} to server: {server}')
-    response, address = sock.recvfrom(1024)
-    print(f'Response data: {response.decode()} from address: {address}')
-    sock.close()
-
+            try:
+                s.connect((host, port))
+                s.sendall(b'Hello, world')
+                data = s.recv(1024)
+                print(f'From server: {data}')
+                break
+            except ConnectionRefusedError:
+                time.sleep(0.5)
 
 def run(server_class=HTTPServer, handler_class=HttpHandler):
     server_address = (UDP_IP, 3000)
@@ -90,10 +91,10 @@ def run(server_class=HTTPServer, handler_class=HttpHandler):
 
 
 if __name__ == '__main__':
-    run()
     server = threading.Thread(target=run_server, args=(UDP_IP, UDP_PORT))
     client = threading.Thread(target=run_client, args=(UDP_IP, UDP_PORT))
     server.start()
     client.start()
     server.join()
     client.join()
+    #run()
