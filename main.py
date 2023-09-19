@@ -6,7 +6,7 @@ import socket
 import threading
 
 UDP_IP = '127.0.0.1'
-UDP_PORT = 8080
+UDP_PORT = 5000
 
 
 class HttpHandler(BaseHTTPRequestHandler):
@@ -68,9 +68,11 @@ def run_server(ip, port):
     finally: 
         sock.close()
 
-def run_client(ip, port, message):
+def run_client(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server = ip, port
+    message = HttpHandler.do_POST()
+    print(message)
     sock.sendto(message, server)
     print(f'Send data: {message} to server: {server}')
     response, address = sock.recvfrom(1024)
@@ -79,7 +81,7 @@ def run_client(ip, port, message):
 
 
 def run(server_class=HTTPServer, handler_class=HttpHandler):
-    server_address = (UDP_IP, UDP_PORT)
+    server_address = (UDP_IP, 3000)
     http = server_class(server_address, handler_class)
     try:
         http.serve_forever()
