@@ -3,6 +3,7 @@ import urllib.parse
 import pathlib
 import mimetypes
 import socket
+import threading
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 8080
@@ -28,10 +29,10 @@ class HttpHandler(BaseHTTPRequestHandler):
         data_parse = urllib.parse.unquote_plus(data.decode())
         print(data_parse)
         data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
-        print(data_dict)
         self.send_response(302)
         self.send_header('Location', '/')
         self.end_headers()
+        return data_dict
 
     def send_static(self):
         self.send_response(200)
@@ -88,3 +89,9 @@ def run(server_class=HTTPServer, handler_class=HttpHandler):
 
 if __name__ == '__main__':
     run()
+    server = threading.Thread(target=run_server, args=(UDP_IP, UDP_PORT))
+    client = threading.Thread(target=run_client, args=(UDP_IP, UDP_PORT))
+    server.start()
+    client.start()
+    server.join()
+    client.join()
