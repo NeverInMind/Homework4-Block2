@@ -27,13 +27,14 @@ class HttpHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         data = self.rfile.read(int(self.headers['Content-Length']))
         print(data)
-        data_parse = urllib.parse.unquote_plus(data.decode())
-        print(data_parse)
-        data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
+        run_client(UDP_IP, UDP_PORT, data)
+        # data_parse = urllib.parse.unquote_plus(data.decode())
+        # print(data_parse)
+        # data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
         self.send_response(302)
         self.send_header('Location', '/')
         self.end_headers()
-        return data_dict
+        # return data_dict
 
     def send_static(self):
         self.send_response(200)
@@ -58,23 +59,25 @@ def run_server(ip, port):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((ip, port))
         s.listen(1)
-        conn, addr = s.accept()
-        print(f"Connected by {addr}")
-        with conn:
-            while True:
-                data = conn.recv(1024)
-                print(f'From client: {data}')
-                if not data:
-                    break
-                conn.send(data.upper())
+        while True:
+            conn, addr = s.accept()
+            print(f"Connected by {addr}")
+            data = conn.recv(1024)
+            print(f'From client: {data}')
+            with open("my_message.txt", "wb") as f:
+                f.write(data)
+            if not data:
+                break
+            conn.send(data.upper())
+            conn.close()
 
 
-def run_client(host, port):
+def run_client(host, port, message=b""):
     with socket.socket() as s:
         while True:
             try:
                 s.connect((host, port))
-                s.sendall(b'Hello, world')
+                s.sendall(message)
                 data = s.recv(1024)
                 print(f'From server: {data}')
                 break
@@ -92,9 +95,9 @@ def run(server_class=HTTPServer, handler_class=HttpHandler):
 
 if __name__ == '__main__':
     server = threading.Thread(target=run_server, args=(UDP_IP, UDP_PORT))
-    client = threading.Thread(target=run_client, args=(UDP_IP, UDP_PORT))
+    client = threading.Thread(target=run)
     server.start()
     client.start()
-    server.join()
-    client.join()
+    # server.join()
+    # client.join()
     #run()
