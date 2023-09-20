@@ -5,6 +5,8 @@ import mimetypes
 import socket
 import threading
 import time
+import datetime
+import json
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 5000
@@ -26,11 +28,7 @@ class HttpHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         data = self.rfile.read(int(self.headers['Content-Length']))
-        print(data)
         run_client(UDP_IP, UDP_PORT, data)
-        # data_parse = urllib.parse.unquote_plus(data.decode())
-        # print(data_parse)
-        # data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
         self.send_response(302)
         self.send_header('Location', '/')
         self.end_headers()
@@ -64,15 +62,21 @@ def run_server(ip, port):
             print(f"Connected by {addr}")
             data = conn.recv(1024)
             print(f'From client: {data}')
-            with open("my_message.txt", "wb") as f:
-                f.write(data)
+            with open(".\storage\data.json", "r", encoding='utf-8') as f:
+                old_data = json.load(f)
+            with open(".\storage\data.json", "w", encoding='utf-8') as f:
+                data_parse = urllib.parse.unquote_plus(data.decode())
+                data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
+                data_dict = {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"): data_dict}
+                old_data.update(data_dict)
+                json.dump(old_data, f)
             if not data:
                 break
             conn.send(data.upper())
             conn.close()
 
 
-def run_client(host, port, message=b""):
+def run_client(host, port, message):
     with socket.socket() as s:
         while True:
             try:
@@ -98,6 +102,3 @@ if __name__ == '__main__':
     client = threading.Thread(target=run)
     server.start()
     client.start()
-    # server.join()
-    # client.join()
-    #run()
